@@ -293,6 +293,55 @@ export default function AdminDashboard() {
     u.role?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Handle Trainer Image File Selection (JPG, JPEG, PNG only)
+  const handleTrainerImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+    const fileNameLower = file.name.toLowerCase();
+    const isValidExt = fileNameLower.endsWith(".jpg") || fileNameLower.endsWith(".jpeg") || fileNameLower.endsWith(".png");
+
+    if (!validTypes.includes(file.type) && !isValidExt) {
+      alert("❌ Invalid File Format! Only JPG, JPEG, and PNG image files are supported.");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+        const dataUrl = canvas.toDataURL(mimeType, 0.85);
+        setTrainerForm((prev) => ({ ...prev, photo: dataUrl }));
+        notify(`📷 Selected photo: ${file.name}`);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="admin-page">
       <AmbientDumbbell variant="full" />
@@ -307,7 +356,7 @@ export default function AdminDashboard() {
               Logged in: <strong>{user?.name || "Gold Admin"}</strong>
             </span>
             <Link to="/" className="btn-ghost admin-nav-home">
-              🌐 View Website
+              🌐 Website
             </Link>
             <button type="button" className="btn-ghost admin-logout" onClick={logout}>
               Logout
@@ -319,6 +368,9 @@ export default function AdminDashboard() {
       <div className="admin-layout">
         <aside className="admin-sidebar">
           <h2>Admin Control</h2>
+          <div className="admin-sidebar-user-badge">
+            👤 <span>{user?.name || "Gold Admin"}</span>
+          </div>
           <nav>
             {TABS.map((t) => (
               <button
@@ -848,18 +900,34 @@ export default function AdminDashboard() {
                     placeholder="e.g. Head Strength Coach"
                   />
                 </label>
-                <label>
-                  Photo Image URL
-                  <input
-                    type="url"
-                    value={trainerForm.photo}
-                    onChange={(e) => setTrainerForm({ ...trainerForm, photo: e.target.value })}
-                    placeholder="https://images.unsplash.com/photo-..."
-                  />
+                <label className="file-upload-label">
+                  Upload Coach Photo (JPG, JPEG, PNG only)
+                  <div className="file-upload-box">
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                      onChange={handleTrainerImageUpload}
+                      className="file-upload-input"
+                    />
+                    <div className="file-upload-ui">
+                      <span className="file-upload-icon">📁</span>
+                      <span className="file-upload-text">Click to choose image file from device</span>
+                      <small className="file-upload-hint">Supported formats: JPG, JPEG, PNG</small>
+                    </div>
+                  </div>
                 </label>
                 {trainerForm.photo && (
                   <div className="trainer-photo-preview">
-                    <span>Image Preview:</span>
+                    <div className="preview-head">
+                      <span>Live Photo Preview:</span>
+                      <button
+                        type="button"
+                        className="btn-remove-photo"
+                        onClick={() => setTrainerForm({ ...trainerForm, photo: "" })}
+                      >
+                        ✕ Remove Photo
+                      </button>
+                    </div>
                     <img src={trainerForm.photo} alt="Preview" onError={(e) => (e.target.style.display = "none")} />
                   </div>
                 )}

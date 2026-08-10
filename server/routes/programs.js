@@ -36,6 +36,8 @@ router.post(
   }
 );
 
+const mongoose = require("mongoose");
+
 router.put(
   "/:id",
   protect,
@@ -47,8 +49,17 @@ router.put(
   ],
   async (req, res, next) => {
     try {
-      const program = await Program.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-      if (!program) return res.status(404).json({ error: "Program not found." });
+      const id = req.params.id;
+      let program;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        program = await Program.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+      }
+      if (!program && req.body.title) {
+        program = await Program.findOneAndUpdate({ title: req.body.title }, req.body, { new: true, upsert: true });
+      }
+      if (!program) {
+        program = await Program.create(req.body);
+      }
       res.json(program);
     } catch (err) {
       next(err);
@@ -58,8 +69,12 @@ router.put(
 
 router.delete("/:id", protect, adminOnly, async (req, res, next) => {
   try {
-    const program = await Program.findByIdAndDelete(req.params.id);
-    if (!program) return res.status(404).json({ error: "Program not found." });
+    const id = req.params.id;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      await Program.findByIdAndDelete(id);
+    } else {
+      await Program.deleteMany({ $or: [{ _id: id }, { title: req.query.title || "" }] });
+    }
     res.json({ message: "Program deleted." });
   } catch (err) {
     next(err);

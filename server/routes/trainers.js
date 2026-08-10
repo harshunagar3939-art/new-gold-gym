@@ -21,7 +21,7 @@ router.post(
   [
     body("name").trim().notEmpty().withMessage("Name required."),
     body("role").trim().notEmpty().withMessage("Role required."),
-    body("photo").optional().isURL().withMessage("Photo must be a valid URL."),
+    body("photo").optional().trim().notEmpty(),
   ],
   async (req, res, next) => {
     try {
@@ -36,6 +36,8 @@ router.post(
   }
 );
 
+const mongoose = require("mongoose");
+
 router.put(
   "/:id",
   protect,
@@ -43,12 +45,21 @@ router.put(
   [
     body("name").optional().trim().notEmpty(),
     body("role").optional().trim().notEmpty(),
-    body("photo").optional().isURL(),
+    body("photo").optional().trim().notEmpty(),
   ],
   async (req, res, next) => {
     try {
-      const trainer = await Trainer.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-      if (!trainer) return res.status(404).json({ error: "Trainer not found." });
+      const id = req.params.id;
+      let trainer;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        trainer = await Trainer.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+      }
+      if (!trainer && req.body.name) {
+        trainer = await Trainer.findOneAndUpdate({ name: req.body.name }, req.body, { new: true, upsert: true });
+      }
+      if (!trainer) {
+        trainer = await Trainer.create(req.body);
+      }
       res.json(trainer);
     } catch (err) {
       next(err);
@@ -58,8 +69,12 @@ router.put(
 
 router.delete("/:id", protect, adminOnly, async (req, res, next) => {
   try {
-    const trainer = await Trainer.findByIdAndDelete(req.params.id);
-    if (!trainer) return res.status(404).json({ error: "Trainer not found." });
+    const id = req.params.id;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      await Trainer.findByIdAndDelete(id);
+    } else {
+      await Trainer.deleteMany({ _id: id });
+    }
     res.json({ message: "Trainer deleted." });
   } catch (err) {
     next(err);

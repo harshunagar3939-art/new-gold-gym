@@ -37,6 +37,8 @@ router.post(
   }
 );
 
+const mongoose = require("mongoose");
+
 router.put(
   "/:id",
   protect,
@@ -48,8 +50,18 @@ router.put(
   ],
   async (req, res, next) => {
     try {
-      const plan = await Plan.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-      if (!plan) return res.status(404).json({ error: "Plan not found." });
+      const id = req.params.id;
+      let plan;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        plan = await Plan.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+      }
+      if (!plan && (req.body.key || id)) {
+        const searchKey = req.body.key || id;
+        plan = await Plan.findOneAndUpdate({ $or: [{ key: searchKey }, { name: req.body.name || searchKey }] }, req.body, { new: true, upsert: true });
+      }
+      if (!plan) {
+        plan = await Plan.create(req.body);
+      }
       res.json(plan);
     } catch (err) {
       next(err);
@@ -59,8 +71,12 @@ router.put(
 
 router.delete("/:id", protect, adminOnly, async (req, res, next) => {
   try {
-    const plan = await Plan.findByIdAndDelete(req.params.id);
-    if (!plan) return res.status(404).json({ error: "Plan not found." });
+    const id = req.params.id;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      await Plan.findByIdAndDelete(id);
+    } else {
+      await Plan.deleteMany({ $or: [{ key: id }, { _id: id }] });
+    }
     res.json({ message: "Plan deleted." });
   } catch (err) {
     next(err);

@@ -34,28 +34,28 @@ export const DEFAULT_PLANS = [
   {
     _id: "plan-1",
     key: "basic",
-    name: "Basic",
-    price: 999,
-    period: "/mo",
+    name: "3 Month Plan",
+    price: 2500,
+    period: "/Yr",
     featured: false,
     features: ["Full gym floor access", "Locker room & showers", "Standard hours (6AM–10PM)"],
   },
   {
     _id: "plan-2",
     key: "gold",
-    name: "Gold",
-    price: 1999,
-    period: "/mo",
-    featured: true,
+    name: "6 Month Plan",
+    price: 3500,
+    period: "/Yr",
+    featured: false,
     features: ["Everything in Basic", "24/7 access", "4 group classes / week", "Nutrition check-ins"],
   },
   {
     _id: "plan-3",
     key: "elite",
-    name: "Elite",
-    price: 3499,
-    period: "/mo",
-    featured: false,
+    name: "1 Year Plan",
+    price: 4500,
+    period: "/Yr",
+    featured: true,
     features: ["Everything in Gold", "2 personal training sessions", "Recovery lab access", "Priority booking"],
   },
 ];
@@ -77,6 +77,7 @@ export const getStoredPrograms = () => {
 
 export const saveStoredPrograms = (items) => {
   localStorage.setItem("ngg_programs", JSON.stringify(items));
+  localStorage.setItem("ngg_programs_customized", "true");
   notifyDataChange();
 };
 
@@ -90,6 +91,7 @@ export const getStoredTrainers = () => {
 
 export const saveStoredTrainers = (items) => {
   localStorage.setItem("ngg_trainers", JSON.stringify(items));
+  localStorage.setItem("ngg_trainers_customized", "true");
   notifyDataChange();
 };
 
@@ -103,6 +105,7 @@ export const getStoredPlans = () => {
 
 export const saveStoredPlans = (items) => {
   localStorage.setItem("ngg_plans", JSON.stringify(items));
+  localStorage.setItem("ngg_plans_customized", "true");
   notifyDataChange();
 };
 
@@ -110,6 +113,9 @@ export const resetWebsiteData = () => {
   localStorage.removeItem("ngg_programs");
   localStorage.removeItem("ngg_trainers");
   localStorage.removeItem("ngg_plans");
+  localStorage.removeItem("ngg_programs_customized");
+  localStorage.removeItem("ngg_trainers_customized");
+  localStorage.removeItem("ngg_plans_customized");
   notifyDataChange();
   return {
     programs: DEFAULT_PROGRAMS,
@@ -120,6 +126,10 @@ export const resetWebsiteData = () => {
 
 // Programs API
 export const getPrograms = async () => {
+  const stored = getStoredPrograms();
+  if (localStorage.getItem("ngg_programs_customized") === "true") {
+    return stored;
+  }
   try {
     const res = await api.get("/programs");
     if (Array.isArray(res.data) && res.data.length > 0) {
@@ -127,7 +137,7 @@ export const getPrograms = async () => {
       return res.data;
     }
   } catch {}
-  return getStoredPrograms();
+  return stored;
 };
 
 export const createProgram = async (data) => {
@@ -168,6 +178,10 @@ export const deleteProgram = async (id) => {
 
 // Trainers API
 export const getTrainers = async () => {
+  const stored = getStoredTrainers();
+  if (localStorage.getItem("ngg_trainers_customized") === "true") {
+    return stored;
+  }
   try {
     const res = await api.get("/trainers");
     if (Array.isArray(res.data) && res.data.length > 0) {
@@ -175,7 +189,7 @@ export const getTrainers = async () => {
       return res.data;
     }
   } catch {}
-  return getStoredTrainers();
+  return stored;
 };
 
 export const createTrainer = async (data) => {
@@ -216,6 +230,10 @@ export const deleteTrainer = async (id) => {
 
 // Plans API
 export const getPlans = async () => {
+  const stored = getStoredPlans();
+  if (localStorage.getItem("ngg_plans_customized") === "true") {
+    return stored;
+  }
   try {
     const res = await api.get("/plans");
     if (Array.isArray(res.data) && res.data.length > 0) {
@@ -223,7 +241,7 @@ export const getPlans = async () => {
       return res.data;
     }
   } catch {}
-  return getStoredPlans();
+  return stored;
 };
 
 export const createPlan = async (data) => {
