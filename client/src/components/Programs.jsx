@@ -19,11 +19,18 @@ export default function Programs() {
   const [tiltStyle, setTiltStyle] = useState({});
 
   useEffect(() => {
-    getPrograms()
-      .then((data) => {
-        if (Array.isArray(data) && data.length) setPrograms(data);
-      })
-      .catch(() => {});
+    let mounted = true;
+    const fetchPrograms = () => {
+      getPrograms().then((data) => {
+        if (mounted && Array.isArray(data)) setPrograms(data);
+      });
+    };
+    fetchPrograms();
+    window.addEventListener("focus", fetchPrograms);
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", fetchPrograms);
+    };
   }, []);
 
   function handleMouseMove(e, id) {

@@ -15,11 +15,18 @@ export default function Trainers() {
   const [trainers, setTrainers] = useState(FALLBACK);
 
   useEffect(() => {
-    getTrainers()
-      .then((data) => {
-        if (Array.isArray(data) && data.length) setTrainers(data);
-      })
-      .catch(() => {});
+    let mounted = true;
+    const fetchTrainers = () => {
+      getTrainers().then((data) => {
+        if (mounted && Array.isArray(data)) setTrainers(data);
+      });
+    };
+    fetchTrainers();
+    window.addEventListener("focus", fetchTrainers);
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", fetchTrainers);
+    };
   }, []);
 
   return (

@@ -37,11 +37,18 @@ export default function Pricing({ onSelectPlan }) {
   const [hoveredKey, setHoveredKey] = useState(null);
 
   useEffect(() => {
-    getPlans()
-      .then((data) => {
-        if (Array.isArray(data) && data.length) setPlans(data);
-      })
-      .catch(() => {});
+    let mounted = true;
+    const fetchPlans = () => {
+      getPlans().then((data) => {
+        if (mounted && Array.isArray(data)) setPlans(data);
+      });
+    };
+    fetchPlans();
+    window.addEventListener("focus", fetchPlans);
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", fetchPlans);
+    };
   }, []);
 
   return (
