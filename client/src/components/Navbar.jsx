@@ -60,7 +60,11 @@ export default function Navbar() {
             </div>
           ) : (
             <Link to="/login" className="nav-login">
-              Login
+              <svg className="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Login</span>
             </Link>
           )}
           <a href={`${homePrefix}#pricing`} className="nav-cta">
@@ -78,6 +82,9 @@ export default function Navbar() {
           <a href={`${homePrefix}#programs`} onClick={() => setMenuOpen(false)}>
             Programs
           </a>
+          <a href={`${homePrefix}#muscle-map`} onClick={() => setMenuOpen(false)}>
+            💪 Muscle 3D Map
+          </a>
           <a href={`${homePrefix}#trainers`} onClick={() => setMenuOpen(false)}>
             Trainers
           </a>
@@ -88,15 +95,19 @@ export default function Navbar() {
             Contact
           </a>
           {isAdmin ? (
-            <Link to="/admin" onClick={() => setMenuOpen(false)}>
-              Admin Panel
+            <Link to="/admin" className="mobile-login-link" onClick={() => setMenuOpen(false)}>
+              ⚡ Admin Panel
             </Link>
           ) : user ? (
-            <button type="button" onClick={() => { logout(); setMenuOpen(false); }}>
-              Logout
+            <button type="button" className="mobile-logout-btn" onClick={() => { logout(); setMenuOpen(false); }}>
+              Logout ({user.name.split(" ")[0]})
             </button>
           ) : (
-            <Link to="/login" onClick={() => setMenuOpen(false)}>
+            <Link to="/login" className="mobile-login-link" onClick={() => setMenuOpen(false)}>
+              <svg className="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
               Login
             </Link>
           )}

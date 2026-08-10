@@ -46,13 +46,6 @@ export default function LoginPage() {
     }
   }
 
-  function handleFillAdminDemo() {
-    setEmail("newgold@admin.com");
-    setPassword("admin@#1234");
-    setIsRegister(false);
-    setError("");
-  }
-
   return (
     <div className="auth-page">
       <AmbientDumbbell variant="full" />
@@ -113,7 +106,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@example.com or newgold@admin.com"
+              placeholder="user@example.com"
               required
               autoComplete="email"
             />
@@ -134,15 +127,6 @@ export default function LoginPage() {
             {submitting ? "Processing..." : isRegister ? "Create Account" : "Sign In"}
           </button>
         </form>
-
-        {!isRegister && (
-          <div className="admin-demo-box">
-            <span>Testing Admin Access?</span>
-            <button type="button" className="btn-admin-fill" onClick={handleFillAdminDemo}>
-              Fill Admin Credentials (newgold@admin.com)
-            </button>
-          </div>
-        )}
 
         <Link to="/" className="auth-back">
           ← Back to Home Page
