@@ -27,9 +27,13 @@ export default function Programs() {
     };
     fetchPrograms();
     window.addEventListener("focus", fetchPrograms);
+    window.addEventListener("ngg_data_updated", fetchPrograms);
+    window.addEventListener("storage", fetchPrograms);
     return () => {
       mounted = false;
       window.removeEventListener("focus", fetchPrograms);
+      window.removeEventListener("ngg_data_updated", fetchPrograms);
+      window.removeEventListener("storage", fetchPrograms);
     };
   }, []);
 

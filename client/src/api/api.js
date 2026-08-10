@@ -60,7 +60,13 @@ export const DEFAULT_PLANS = [
   },
 ];
 
-// Helper functions for Local Storage persistence
+// Helper functions for Local Storage persistence & Real-Time Event Sync
+export const notifyDataChange = () => {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("ngg_data_updated"));
+  }
+};
+
 export const getStoredPrograms = () => {
   const data = localStorage.getItem("ngg_programs");
   if (data) {
@@ -71,6 +77,7 @@ export const getStoredPrograms = () => {
 
 export const saveStoredPrograms = (items) => {
   localStorage.setItem("ngg_programs", JSON.stringify(items));
+  notifyDataChange();
 };
 
 export const getStoredTrainers = () => {
@@ -83,6 +90,7 @@ export const getStoredTrainers = () => {
 
 export const saveStoredTrainers = (items) => {
   localStorage.setItem("ngg_trainers", JSON.stringify(items));
+  notifyDataChange();
 };
 
 export const getStoredPlans = () => {
@@ -95,12 +103,14 @@ export const getStoredPlans = () => {
 
 export const saveStoredPlans = (items) => {
   localStorage.setItem("ngg_plans", JSON.stringify(items));
+  notifyDataChange();
 };
 
 export const resetWebsiteData = () => {
   localStorage.removeItem("ngg_programs");
   localStorage.removeItem("ngg_trainers");
   localStorage.removeItem("ngg_plans");
+  notifyDataChange();
   return {
     programs: DEFAULT_PROGRAMS,
     trainers: DEFAULT_TRAINERS,

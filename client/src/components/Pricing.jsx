@@ -45,9 +45,13 @@ export default function Pricing({ onSelectPlan }) {
     };
     fetchPlans();
     window.addEventListener("focus", fetchPlans);
+    window.addEventListener("ngg_data_updated", fetchPlans);
+    window.addEventListener("storage", fetchPlans);
     return () => {
       mounted = false;
       window.removeEventListener("focus", fetchPlans);
+      window.removeEventListener("ngg_data_updated", fetchPlans);
+      window.removeEventListener("storage", fetchPlans);
     };
   }, []);
 

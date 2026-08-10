@@ -23,9 +23,13 @@ export default function Trainers() {
     };
     fetchTrainers();
     window.addEventListener("focus", fetchTrainers);
+    window.addEventListener("ngg_data_updated", fetchTrainers);
+    window.addEventListener("storage", fetchTrainers);
     return () => {
       mounted = false;
       window.removeEventListener("focus", fetchTrainers);
+      window.removeEventListener("ngg_data_updated", fetchTrainers);
+      window.removeEventListener("storage", fetchTrainers);
     };
   }, []);
 

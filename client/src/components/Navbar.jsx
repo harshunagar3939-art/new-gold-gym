@@ -49,7 +49,7 @@ export default function Navbar() {
         <div className="nav-actions">
           {isAdmin ? (
             <Link to="/admin" className="nav-login nav-admin-badge">
-              ⚡ Admin Panel
+              ⚡ Admin
             </Link>
           ) : user ? (
             <div className="nav-user-chip">
@@ -79,6 +79,11 @@ export default function Navbar() {
       </nav>
       {menuOpen && (
         <div className="mobile-menu">
+          {user && (
+            <div className="mobile-user-banner">
+              👤 Signed in as <strong>{user.name}</strong>
+            </div>
+          )}
           <a href={`${homePrefix}#programs`} onClick={() => setMenuOpen(false)}>
             Programs
           </a>
