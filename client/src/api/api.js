@@ -113,31 +113,31 @@ export const resetWebsiteData = () => {
   localStorage.removeItem("ngg_programs");
   localStorage.removeItem("ngg_trainers");
   localStorage.removeItem("ngg_plans");
+  localStorage.removeItem("ngg_reviews");
   localStorage.removeItem("ngg_programs_customized");
   localStorage.removeItem("ngg_trainers_customized");
   localStorage.removeItem("ngg_plans_customized");
+  localStorage.removeItem("ngg_reviews_customized");
   notifyDataChange();
   return {
     programs: DEFAULT_PROGRAMS,
     trainers: DEFAULT_TRAINERS,
     plans: DEFAULT_PLANS,
+    reviews: DEFAULT_REVIEWS,
   };
 };
 
 // Programs API
 export const getPrograms = async () => {
-  const stored = getStoredPrograms();
-  if (localStorage.getItem("ngg_programs_customized") === "true") {
-    return stored;
-  }
   try {
     const res = await api.get("/programs");
     if (Array.isArray(res.data) && res.data.length > 0) {
-      saveStoredPrograms(res.data);
+      localStorage.setItem("ngg_programs", JSON.stringify(res.data));
+      notifyDataChange();
       return res.data;
     }
   } catch {}
-  return stored;
+  return getStoredPrograms();
 };
 
 export const createProgram = async (data) => {
@@ -178,18 +178,15 @@ export const deleteProgram = async (id) => {
 
 // Trainers API
 export const getTrainers = async () => {
-  const stored = getStoredTrainers();
-  if (localStorage.getItem("ngg_trainers_customized") === "true") {
-    return stored;
-  }
   try {
     const res = await api.get("/trainers");
     if (Array.isArray(res.data) && res.data.length > 0) {
-      saveStoredTrainers(res.data);
+      localStorage.setItem("ngg_trainers", JSON.stringify(res.data));
+      notifyDataChange();
       return res.data;
     }
   } catch {}
-  return stored;
+  return getStoredTrainers();
 };
 
 export const createTrainer = async (data) => {
@@ -230,18 +227,15 @@ export const deleteTrainer = async (id) => {
 
 // Plans API
 export const getPlans = async () => {
-  const stored = getStoredPlans();
-  if (localStorage.getItem("ngg_plans_customized") === "true") {
-    return stored;
-  }
   try {
     const res = await api.get("/plans");
     if (Array.isArray(res.data) && res.data.length > 0) {
-      saveStoredPlans(res.data);
+      localStorage.setItem("ngg_plans", JSON.stringify(res.data));
+      notifyDataChange();
       return res.data;
     }
   } catch {}
-  return stored;
+  return getStoredPlans();
 };
 
 export const createPlan = async (data) => {
@@ -357,6 +351,68 @@ export const deleteLead = async (id) => {
   return { message: "Deleted" };
 };
 
+export const DEFAULT_REVIEWS = [
+  { _id: "rev-1", name: "Kavya Desai", rating: 5, role: "Member since 2024", comment: "I walked in unable to do a single pull-up. Ten months later I deadlift twice my bodyweight.", status: "approved", createdAt: new Date() },
+  { _id: "rev-2", name: "Rahul Sharma", rating: 5, role: "Powerlifting Athlete", comment: "Best gym equipment and coaching atmosphere in Surat. Staff is super supportive and knowledgeable.", status: "approved", createdAt: new Date() },
+  { _id: "rev-3", name: "Ananya Patel", rating: 5, role: "CrossFit Member", comment: "Clean space, top quality dumbbells, and unbeatable energy every morning. Highly recommended!", status: "approved", createdAt: new Date() },
+];
+
+export const getStoredReviews = () => {
+  const data = localStorage.getItem("ngg_reviews");
+  if (data) {
+    try { return JSON.parse(data); } catch {}
+  }
+  return DEFAULT_REVIEWS;
+};
+
+export const saveStoredReviews = (items) => {
+  localStorage.setItem("ngg_reviews", JSON.stringify(items));
+  localStorage.setItem("ngg_reviews_customized", "true");
+  notifyDataChange();
+};
+
+export const getReviews = async (params) => {
+  try {
+    const res = await api.get("/reviews", { params });
+    if (Array.isArray(res.data) && res.data.length > 0) {
+      localStorage.setItem("ngg_reviews", JSON.stringify(res.data));
+      notifyDataChange();
+      return res.data;
+    }
+  } catch {}
+  return getStoredReviews();
+};
+
+export const createReview = async (payload) => {
+  let created;
+  try {
+    const res = await api.post("/reviews", payload);
+    created = res.data;
+  } catch {
+    created = { ...payload, _id: "rev-" + Date.now(), status: "approved", createdAt: new Date() };
+  }
+  const current = getStoredReviews();
+  const updated = [created, ...current];
+  saveStoredReviews(updated);
+  return created;
+};
+
+export const updateReviewStatus = async (id, status) => {
+  try { await api.patch(`/reviews/${id}`, { status }); } catch {}
+  const current = getStoredReviews();
+  const list = current.map((r) => (r._id === id ? { ...r, status } : r));
+  saveStoredReviews(list);
+  return { _id: id, status };
+};
+
+export const deleteReview = async (id) => {
+  try { await api.delete(`/reviews/${id}`); } catch {}
+  const current = getStoredReviews();
+  const list = current.filter((r) => r._id !== id);
+  saveStoredReviews(list);
+  return { message: "Deleted" };
+};
+
 export const getStats = async () => {
   try {
     const res = await api.get("/stats");
@@ -366,12 +422,14 @@ export const getStats = async () => {
     const trs = getStoredTrainers();
     const pls = getStoredPlans();
     const lds = await getLeads();
+    const revs = getStoredReviews();
     return {
       totalLeads: lds.length,
       newLeads: lds.filter((l) => l.status === "new").length,
       programs: progs.length,
       trainers: trs.length,
       plans: pls.length,
+      reviews: revs.length,
     };
   }
 };

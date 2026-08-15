@@ -73,7 +73,7 @@ router.delete("/:id", protect, adminOnly, async (req, res, next) => {
     if (mongoose.Types.ObjectId.isValid(id)) {
       await Trainer.findByIdAndDelete(id);
     } else {
-      await Trainer.deleteMany({ _id: id });
+      await Trainer.deleteMany({ $or: [{ _id: id }, { name: req.query.name || "" }] });
     }
     res.json({ message: "Trainer deleted." });
   } catch (err) {

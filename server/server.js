@@ -12,6 +12,7 @@ const programsRouter = require("./routes/programs");
 const trainersRouter = require("./routes/trainers");
 const plansRouter = require("./routes/plans");
 const statsRouter = require("./routes/stats");
+const reviewsRouter = require("./routes/reviews");
 
 const app = express();
 
@@ -26,11 +27,13 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 const Program = require("./models/Program");
 const Trainer = require("./models/Trainer");
 const Plan = require("./models/Plan");
+const Review = require("./models/Review");
 
 let seeded = false;
 async function autoSeedIfEmpty() {
@@ -65,12 +68,23 @@ async function autoSeedIfEmpty() {
     const planCount = await Plan.countDocuments();
     if (planCount === 0) {
       const plans = [
-        { key: "basic", name: "Basic", price: 999, period: "/mo", featured: false, features: ["Full gym floor access", "Locker room & showers", "Standard hours (6AM–10PM)"] },
-        { key: "gold", name: "Gold", price: 1999, period: "/mo", featured: true, features: ["Everything in Basic", "24/7 access", "4 group classes / week", "Nutrition check-ins"] },
-        { key: "elite", name: "Elite", price: 3499, period: "/mo", featured: false, features: ["Everything in Gold", "2 personal training sessions", "Recovery lab access", "Priority booking"] },
+        { key: "basic", name: "3 Month Plan", price: 2500, period: "/Yr", featured: false, features: ["Full gym floor access", "Locker room & showers", "Standard hours (6AM–10PM)"] },
+        { key: "gold", name: "6 Month Plan", price: 3500, period: "/Yr", featured: false, features: ["Everything in Basic", "24/7 access", "4 group classes / week", "Nutrition check-ins"] },
+        { key: "elite", name: "1 Year Plan", price: 4500, period: "/Yr", featured: true, features: ["Everything in Gold", "2 personal training sessions", "Recovery lab access", "Priority booking"] },
       ];
       await Plan.insertMany(plans);
       console.log("[auto-seed] Plans initialized.");
+    }
+
+    const reviewCount = await Review.countDocuments();
+    if (reviewCount === 0) {
+      const reviews = [
+        { name: "Kavya Desai", rating: 5, role: "Member since 2024", comment: "I walked in unable to do a single pull-up. Ten months later I deadlift twice my bodyweight.", status: "approved" },
+        { name: "Rahul Sharma", rating: 5, role: "Powerlifting Athlete", comment: "Best gym equipment and coaching atmosphere in Surat. Staff is super supportive and knowledgeable.", status: "approved" },
+        { name: "Ananya Patel", rating: 5, role: "CrossFit Member", comment: "Clean space, top quality dumbbells, and unbeatable energy every morning. Highly recommended!", status: "approved" },
+      ];
+      await Review.insertMany(reviews);
+      console.log("[auto-seed] Reviews initialized.");
     }
     seeded = true;
   } catch (err) {
@@ -112,6 +126,7 @@ app.use("/api/leads", leadLimiter, leadsRouter);
 app.use("/api/programs", programsRouter);
 app.use("/api/trainers", trainersRouter);
 app.use("/api/plans", plansRouter);
+app.use("/api/reviews", reviewsRouter);
 app.use("/api/stats", statsRouter);
 
 app.use((req, res) => {

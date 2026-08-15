@@ -21,6 +21,10 @@ import {
   deletePlan,
   getUsers,
   deleteUser,
+  getReviews,
+  createReview,
+  updateReviewStatus,
+  deleteReview,
   resetWebsiteData,
 } from "../api/api";
 
@@ -30,10 +34,12 @@ const TABS = [
   { key: "programs", label: "💪 Programs" },
   { key: "trainers", label: "🏋️ Coaches" },
   { key: "plans", label: "🏷️ Membership Plans" },
+  { key: "reviews", label: "⭐ Customer Reviews" },
   { key: "users", label: "👥 Users / Members" },
 ];
 
 const STATUS_OPTIONS = ["new", "contacted", "converted", "closed"];
+const REVIEW_STATUS_OPTIONS = ["approved", "pending"];
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -43,6 +49,7 @@ export default function AdminDashboard() {
   const [programs, setPrograms] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [plans, setPlans] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,7 +60,7 @@ export default function AdminDashboard() {
   // Modal / Form state
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalMode, setModalMode] = useState("create"); // "create" | "edit"
-  const [modalType, setModalType] = useState(""); // "program" | "trainer" | "plan"
+  const [modalType, setModalType] = useState(""); // "program" | "trainer" | "plan" | "review"
   const [editingId, setEditingId] = useState(null);
 
   const [programForm, setProgramForm] = useState({ title: "", description: "", order: 1 });
@@ -62,9 +69,15 @@ export default function AdminDashboard() {
     key: "",
     name: "",
     price: 1999,
-    period: "/mo",
+    period: "/Yr",
     featured: false,
     featuresStr: "Full Access, Personal Locker, Locker Room",
+  });
+  const [reviewForm, setReviewForm] = useState({
+    name: "",
+    rating: 5,
+    role: "Member",
+    comment: "",
   });
 
   const notify = (msg) => {
@@ -86,12 +99,14 @@ export default function AdminDashboard() {
             programs: programs.length || 6,
             trainers: trainers.length || 4,
             plans: plans.length || 3,
+            reviews: reviews.length || 3,
           });
         }
         setPrograms(await getPrograms());
         setTrainers(await getTrainers());
         setPlans(await getPlans());
         setLeads(await getLeads());
+        setReviews(await getReviews());
       } else if (activeTab === "leads") {
         setLeads(await getLeads());
       } else if (activeTab === "programs") {
@@ -100,6 +115,8 @@ export default function AdminDashboard() {
         setTrainers(await getTrainers());
       } else if (activeTab === "plans") {
         setPlans(await getPlans());
+      } else if (activeTab === "reviews") {
+        setReviews(await getReviews());
       } else if (activeTab === "users") {
         setUsers(await getUsers());
       }
@@ -116,11 +133,12 @@ export default function AdminDashboard() {
 
   // Reset website data to default fallback
   const handleResetData = () => {
-    if (!window.confirm("Are you sure you want to reset website content (Programs, Coaches, Plans) to initial defaults?")) return;
+    if (!window.confirm("Are you sure you want to reset website content (Programs, Coaches, Plans, Reviews) to initial defaults?")) return;
     const restored = resetWebsiteData();
     setPrograms(restored.programs);
     setTrainers(restored.trainers);
     setPlans(restored.plans);
+    if (restored.reviews) setReviews(restored.reviews);
     notify("🔄 Website content reset to initial default settings!");
   };
 
@@ -134,7 +152,9 @@ export default function AdminDashboard() {
     } else if (type === "trainer") {
       setTrainerForm({ name: "", role: "", photo: "" });
     } else if (type === "plan") {
-      setPlanForm({ key: "", name: "", price: 1999, period: "/mo", featured: false, featuresStr: "Full Access, Personal Locker, Locker Room" });
+      setPlanForm({ key: "", name: "", price: 2500, period: "/Yr", featured: false, featuresStr: "Full Access, Personal Locker, Locker Room" });
+    } else if (type === "review") {
+      setReviewForm({ name: "", rating: 5, role: "Member", comment: "" });
     }
     setShowAddModal(true);
   };
@@ -164,7 +184,7 @@ export default function AdminDashboard() {
       key: plan.key || "",
       name: plan.name,
       price: plan.price,
-      period: plan.period || "/mo",
+      period: plan.period || "/Yr",
       featured: Boolean(plan.featured),
       featuresStr: Array.isArray(plan.features) ? plan.features.join(", ") : plan.features || "",
     });
@@ -240,6 +260,28 @@ export default function AdminDashboard() {
     notify("🗑️ Membership plan deleted.");
   }
 
+  // --- REVIEW ACTIONS ---
+  async function handleSaveReview(e) {
+    e.preventDefault();
+    const created = await createReview(reviewForm);
+    setReviews((prev) => [created, ...prev]);
+    notify("⭐ New review added to website!");
+    setShowAddModal(false);
+  }
+
+  async function handleReviewStatusChange(id, status) {
+    await updateReviewStatus(id, status);
+    setReviews((prev) => prev.map((r) => (r._id === id ? { ...r, status } : r)));
+    notify("✅ Review status updated!");
+  }
+
+  async function handleDeleteReview(id) {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    await deleteReview(id);
+    setReviews((prev) => prev.filter((r) => r._id !== id));
+    notify("🗑️ Review deleted.");
+  }
+
   // --- LEAD & USER ACTIONS ---
   async function handleStatusChange(id, status) {
     await updateLeadStatus(id, status);
@@ -260,38 +302,6 @@ export default function AdminDashboard() {
     setUsers((prev) => prev.filter((u) => u._id !== id));
     notify("🗑️ User account removed.");
   }
-
-  // Filtered lists
-  const filteredLeads = leads.filter((l) => {
-    const matchesSearch =
-      l.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.plan?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = leadStatusFilter === "all" || l.status === leadStatusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const filteredPrograms = programs.filter((p) =>
-    p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredTrainers = trainers.filter((t) =>
-    t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.role?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredPlans = plans.filter((p) =>
-    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.key?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredUsers = users.filter((u) =>
-    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.role?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   // Handle Trainer Image File Selection (JPG, JPEG, PNG only)
   const handleTrainerImageUpload = (e) => {
@@ -341,6 +351,44 @@ export default function AdminDashboard() {
     };
     reader.readAsDataURL(file);
   };
+
+  // Filtered lists
+  const filteredLeads = leads.filter((l) => {
+    const matchesSearch =
+      l.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.plan?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = leadStatusFilter === "all" || l.status === leadStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredPrograms = programs.filter((p) =>
+    p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredTrainers = trainers.filter((t) =>
+    t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.role?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredPlans = plans.filter((p) =>
+    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.key?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredReviews = reviews.filter((r) =>
+    r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.comment?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.role?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredUsers = users.filter((u) =>
+    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.role?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="admin-page">
@@ -405,7 +453,7 @@ export default function AdminDashboard() {
                   <div className="admin-title-row">
                     <div>
                       <h1>Dashboard Overview</h1>
-                      <p className="admin-subtitle">Control and update website content, coaches, plans & member enquiries.</p>
+                      <p className="admin-subtitle">Control and update website content, coaches, plans, reviews & member enquiries.</p>
                     </div>
                     <div className="admin-header-right-btns">
                       <span className="admin-badge-active">● System Live</span>
@@ -436,6 +484,10 @@ export default function AdminDashboard() {
                       <span className="admin-stat-num">{plans.length}</span>
                       <span className="admin-stat-label">Membership Plans</span>
                     </div>
+                    <div className="admin-stat-card" onClick={() => setTab("reviews")}>
+                      <span className="admin-stat-num">{reviews.length}</span>
+                      <span className="admin-stat-label">User Reviews</span>
+                    </div>
                   </div>
 
                   <div className="admin-quick-actions">
@@ -448,10 +500,10 @@ export default function AdminDashboard() {
                         + Add Coach
                       </button>
                       <button type="button" className="btn-primary" onClick={() => openCreateModal("plan")}>
-                        + Add Membership Plan
+                        + Add Plan
                       </button>
-                      <button type="button" className="btn-ghost" onClick={() => setTab("leads")}>
-                        View All Enquiries →
+                      <button type="button" className="btn-primary" onClick={() => openCreateModal("review")}>
+                        + Add Review
                       </button>
                     </div>
                   </div>
@@ -653,7 +705,7 @@ export default function AdminDashboard() {
                   <div className="admin-title-row">
                     <div>
                       <h1>Coaches Roster ({filteredTrainers.length})</h1>
-                      <p className="admin-subtitle">Edit trainer profile names, roles, and photo URLs displayed on the website.</p>
+                      <p className="admin-subtitle">Upload coach photo files (JPG/PNG) and edit trainer profile names & roles.</p>
                     </div>
                     <div className="admin-title-actions">
                       <input
@@ -730,7 +782,7 @@ export default function AdminDashboard() {
                         {p.featured && <span className="badge-featured">MOST POPULAR</span>}
                         <h3>
                           {p.name} — ₹{p.price}
-                          <small>{p.period}</small>
+                          <small>{p.period || "/Yr"}</small>
                         </h3>
                         <ul className="admin-feature-list">
                           {p.features?.map((f, i) => (
@@ -760,7 +812,88 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* ===== TAB 6: USERS / MEMBERS ===== */}
+              {/* ===== TAB 6: CUSTOMER REVIEWS (NEW) ===== */}
+              {tab === "reviews" && (
+                <div className="admin-section">
+                  <div className="admin-title-row">
+                    <div>
+                      <h1>User Reviews & Testimonials ({filteredReviews.length})</h1>
+                      <p className="admin-subtitle">Manage member feedback, approve user reviews, or add featured testimonials.</p>
+                    </div>
+                    <div className="admin-title-actions">
+                      <input
+                        type="text"
+                        className="admin-search-input"
+                        placeholder="Search review by reviewer or comment..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      <button type="button" className="btn-primary" onClick={() => openCreateModal("review")}>
+                        + Add New Review
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Member Name</th>
+                          <th>Rating</th>
+                          <th>Role/Tag</th>
+                          <th>Review Comment</th>
+                          <th>Status</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredReviews.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="admin-empty">
+                              No reviews match your search.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredReviews.map((rev) => (
+                            <tr key={rev._id}>
+                              <td className="font-bold">{rev.name}</td>
+                              <td className="review-stars-cell">
+                                {"★".repeat(rev.rating || 5)}
+                              </td>
+                              <td><span className="tag-role">{rev.role || "Member"}</span></td>
+                              <td className="review-comment-cell">"{rev.comment}"</td>
+                              <td>
+                                <select
+                                  value={rev.status || "approved"}
+                                  onChange={(e) => handleReviewStatusChange(rev._id, e.target.value)}
+                                  className={`admin-select status-${rev.status || "approved"}`}
+                                >
+                                  {REVIEW_STATUS_OPTIONS.map((st) => (
+                                    <option key={st} value={st}>
+                                      {st.toUpperCase()}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="admin-delete"
+                                  onClick={() => handleDeleteReview(rev._id)}
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== TAB 7: USERS / MEMBERS ===== */}
               {tab === "users" && (
                 <div className="admin-section">
                   <div className="admin-title-row">
@@ -947,7 +1080,7 @@ export default function AdminDashboard() {
                     required
                     value={planForm.name}
                     onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-                    placeholder="e.g. Gold Membership"
+                    placeholder="e.g. 1 Year Plan"
                   />
                 </label>
                 <label>
@@ -965,7 +1098,7 @@ export default function AdminDashboard() {
                     type="text"
                     value={planForm.period}
                     onChange={(e) => setPlanForm({ ...planForm, period: e.target.value })}
-                    placeholder="/mo or /yr"
+                    placeholder="/Yr or /mo"
                   />
                 </label>
                 <label>
@@ -987,6 +1120,58 @@ export default function AdminDashboard() {
                 </label>
                 <button type="submit" className="btn-primary">
                   {modalMode === "edit" ? "Update Membership Plan" : "Save Membership Plan"}
+                </button>
+              </form>
+            )}
+
+            {/* REVIEW FORM (ADMIN) */}
+            {modalType === "review" && (
+              <form onSubmit={handleSaveReview} className="admin-modal-form">
+                <label>
+                  Member Name
+                  <input
+                    type="text"
+                    required
+                    value={reviewForm.name}
+                    onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
+                    placeholder="e.g. Kavya Desai"
+                  />
+                </label>
+                <label>
+                  Rating (1 to 5 Stars)
+                  <select
+                    value={reviewForm.rating}
+                    onChange={(e) => setReviewForm({ ...reviewForm, rating: Number(e.target.value) })}
+                    className="admin-select"
+                  >
+                    {[5, 4, 3, 2, 1].map((num) => (
+                      <option key={num} value={num}>
+                        {"★".repeat(num)} ({num} Star{num > 1 ? "s" : ""})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Role / Member Tag
+                  <input
+                    type="text"
+                    value={reviewForm.role}
+                    onChange={(e) => setReviewForm({ ...reviewForm, role: e.target.value })}
+                    placeholder="e.g. Member since 2024"
+                  />
+                </label>
+                <label>
+                  Review Comment / Feedback
+                  <textarea
+                    required
+                    rows={4}
+                    value={reviewForm.comment}
+                    onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                    placeholder="Write member feedback quote..."
+                  />
+                </label>
+                <button type="submit" className="btn-primary">
+                  Save & Publish Review
                 </button>
               </form>
             )}
